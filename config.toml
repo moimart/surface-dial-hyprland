@@ -1,0 +1,13 @@
+[general]
+overlay_timeout_ms = 1500
+
+[hyprscroll]
+# 0 = scroll one column at a time (smooth, uses Hyprland animations)
+# >0 = scroll by this many pixels per dial tick
+pixels_per_tick = 0
+
+[volume]
+step_percent = 2
+
+[appscroll]
+speed_multiplier = 1

@@ -1,0 +1,37 @@
+/* Surface Dial Overlay Theme — Catppuccin Mocha */
+/* Copy to ~/.config/surface-dial/theme.css to customize */
+
+window {
+    background-color: transparent;
+}
+
+.overlay-container {
+    background-color: rgba(30, 30, 46, 0.92);
+    border-radius: 24px;
+    padding: 24px 32px;
+    border: 2px solid rgba(137, 180, 250, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.overlay-icon {
+    font-size: 48px;
+    color: #89b4fa;
+}
+
+.overlay-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #cdd6f4;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+/* Mode-specific accent colors */
+.mode-hyprscroll .overlay-icon { color: #89b4fa; }
+.mode-hyprscroll { border-color: rgba(137, 180, 250, 0.3); }
+
+.mode-volume .overlay-icon { color: #a6e3a1; }
+.mode-volume { border-color: rgba(166, 227, 161, 0.3); }
+
+.mode-appscroll .overlay-icon { color: #f9e2af; }
+.mode-appscroll { border-color: rgba(249, 226, 175, 0.3); }

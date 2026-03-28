@@ -1,0 +1,5 @@
+# Surface Dial input device access
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{name}=="Surface Dial System Multi Axis", TAG+="uaccess"
+
+# uinput access for virtual scroll device
+KERNEL=="uinput", SUBSYSTEM=="misc", OPTIONS+="static_node=uinput", TAG+="uaccess"
