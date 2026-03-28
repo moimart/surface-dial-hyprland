@@ -25,7 +25,7 @@ impl HyprScrollMode {
         self.last_dispatch = Some(now);
 
         if self.pixels_per_tick <= 0 {
-            let dir = if delta > 0 { "focus l" } else { "focus r" };
+            let dir = if delta > 0 { "move -col" } else { "move +col" };
             log::debug!("Hyprland: layoutmsg {dir}");
             if let Err(e) = hypr_ipc::hypr_dispatch("layoutmsg", dir) {
                 log::warn!("Hyprland scroll failed: {e}");
