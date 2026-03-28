@@ -157,4 +157,4 @@ The daemon reads Surface Dial events (`REL_DIAL` for rotation, `BTN_0` for click
 
 ## License
 
-MIT
+[MIT](LICENSE)
