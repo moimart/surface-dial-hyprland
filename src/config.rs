@@ -8,12 +8,14 @@ pub struct Config {
     pub hyprscroll: HyprScroll,
     pub volume: Volume,
     pub appscroll: AppScroll,
+    pub zoom: Zoom,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(default)]
 pub struct General {
     pub overlay_timeout_ms: u64,
+    pub mode_order: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,6 +36,12 @@ pub struct AppScroll {
     pub speed_multiplier: i32,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct Zoom {
+    pub step: f64,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -41,6 +49,7 @@ impl Default for Config {
             hyprscroll: HyprScroll::default(),
             volume: Volume::default(),
             appscroll: AppScroll::default(),
+            zoom: Zoom::default(),
         }
     }
 }
@@ -49,6 +58,12 @@ impl Default for General {
     fn default() -> Self {
         Self {
             overlay_timeout_ms: 1500,
+            mode_order: vec![
+                "volume".into(),
+                "zoom".into(),
+                "appscroll".into(),
+                "hyprscroll".into(),
+            ],
         }
     }
 }
@@ -72,6 +87,12 @@ impl Default for AppScroll {
         Self {
             speed_multiplier: 1,
         }
+    }
+}
+
+impl Default for Zoom {
+    fn default() -> Self {
+        Self { step: 0.5 }
     }
 }
 

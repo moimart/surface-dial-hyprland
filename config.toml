@@ -1,5 +1,7 @@
 [general]
 overlay_timeout_ms = 1500
+# Mode cycle order. Available: volume, zoom, appscroll, hyprscroll
+mode_order = ["volume", "zoom", "appscroll", "hyprscroll"]
 
 [hyprscroll]
 # 0 = scroll one column at a time (smooth, uses Hyprland animations)

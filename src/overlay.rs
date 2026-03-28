@@ -59,7 +59,7 @@ impl Overlay {
 
     pub fn show_mode(&self, icon: &str, name: &str, css_class: &str, timeout_ms: u64) {
         // Remove previous mode class
-        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll"] {
+        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom"] {
             self.container.remove_css_class(class);
         }
         self.container.add_css_class(css_class);
@@ -143,4 +143,7 @@ window {
 
 .mode-appscroll .overlay-icon { color: #f9e2af; }
 .mode-appscroll { border-color: rgba(249, 226, 175, 0.3); }
+
+.mode-zoom .overlay-icon { color: #cba6f7; }
+.mode-zoom { border-color: rgba(203, 166, 247, 0.3); }
 "#;
