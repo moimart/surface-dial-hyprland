@@ -51,7 +51,7 @@ fn main() {
             while let Ok(event) = rx.try_recv() {
                 match event {
                     DialEvent::Rotate(delta) if delta != 0 => {
-                        *rotate_acc_poll.borrow_mut() += delta.signum();
+                        *rotate_acc_poll.borrow_mut() -= delta.signum();
                     }
                     DialEvent::Click => {
                         let mut m = manager_poll.borrow_mut();
