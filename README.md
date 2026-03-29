@@ -1,12 +1,14 @@
 # Surface Dial Daemon for Linux
 
-A lightweight daemon that maps the Microsoft Surface Dial to three cycling modes on Hyprland (Wayland):
+A lightweight daemon that maps the Microsoft Surface Dial to cycling modes on Hyprland (Wayland):
 
-- **Scroll Layout** — navigate columns in Hyprland's scrolling layout
 - **Volume** — adjust system volume via PipeWire/WirePlumber
+- **Zoom** — Hyprland cursor zoom in/out
 - **App Scroll** — scroll the focused application window
+- **Scroll Layout** — navigate columns in Hyprland's scrolling layout
+- **Home Assistant Media** — control a Home Assistant media player's volume via REST API
 
-Click the dial to cycle between modes. A floating overlay indicator shows the active mode.
+Click the dial to cycle between modes. A floating overlay indicator shows the active mode with per-mode accent colors and a volume bar for HA media.
 
 ## Requirements
 
@@ -74,17 +76,33 @@ cargo run --release
 RUST_LOG=debug cargo run --release
 ```
 
+### Managing the service
+
+```sh
+make enable     # enable and start
+make disable    # stop and disable
+make restart    # restart after config changes
+make status     # check if running
+make logs       # view live logs
+```
+
 ### Uninstall
 
 ```sh
 make uninstall  # stops service, removes binary and unit file (keeps config)
 ```
 
-### config.toml
+## Configuration
+
+Config lives at `~/.config/surface-dial/config.toml`.
 
 ```toml
 [general]
-overlay_timeout_ms = 1500     # How long the mode indicator stays visible
+overlay_timeout_ms = 1500
+
+# Mode cycle order — click the dial to rotate through these.
+# Available modes: volume, zoom, appscroll, hyprscroll, hass_media
+mode_order = ["volume", "zoom", "appscroll", "hyprscroll"]
 
 [hyprscroll]
 # 0 = column mode (focus r/l, smooth with Hyprland animations)
@@ -96,17 +114,48 @@ step_percent = 2              # Volume change per dial tick
 
 [appscroll]
 speed_multiplier = 1          # Scroll notches per dial tick
+
+[zoom]
+step = 0.5                    # Zoom factor change per dial tick
+
+[hass_media]
+url = "http://homeassistant.local:8123"
+token = "your-long-lived-access-token"
+entity_id = "media_player.living_room"
+volume_step = 0.02            # Volume change per tick (0.0 - 1.0)
 ```
 
-### theme.css
+### Modes
 
-The overlay is styled with GTK4 CSS. The default theme uses Catppuccin Mocha colors with per-mode accents:
+| Mode | What it does | Config section |
+|------|-------------|----------------|
+| **volume** | System volume via `wpctl` | `[volume]` |
+| **zoom** | Hyprland `cursor:zoom_factor` | `[zoom]` |
+| **appscroll** | Injects virtual scroll wheel events | `[appscroll]` |
+| **hyprscroll** | Navigates Hyprland scrolling layout columns | `[hyprscroll]` |
+| **hass_media** | Controls Home Assistant media player volume | `[hass_media]` |
+
+Add or remove modes from `mode_order` to customize which modes are available and in what order. Modes not listed are skipped when cycling.
+
+### Home Assistant Media setup
+
+1. Create a [long-lived access token](https://www.home-assistant.io/docs/authentication/#your-account-profile) in your HA profile
+2. Find your media player entity ID (e.g. `media_player.living_room`)
+3. Add the `[hass_media]` section to your config and include `"hass_media"` in `mode_order`
+
+The overlay shows a volume bar with percentage when adjusting HA media volume.
+
+### Theme
+
+The overlay is styled with GTK4 CSS. The default theme uses Catppuccin Mocha colors:
 
 | Mode | Accent Color |
 |------|-------------|
 | Scroll Layout | Blue `#89b4fa` |
 | Volume | Green `#a6e3a1` |
 | App Scroll | Yellow `#f9e2af` |
+| Zoom | Purple `#cba6f7` |
+| HA Media | Pink `#f38ba8` |
 
 Override by editing `~/.config/surface-dial/theme.css`. See `theme.css` in this repo for the full default.
 
