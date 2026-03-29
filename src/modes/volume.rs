@@ -11,9 +11,9 @@ impl VolumeMode {
 
     pub fn on_rotate(&self, delta: i32) {
         let direction = if delta.signum() > 0 {
-            format!("{}%+", self.step_percent)
-        } else {
             format!("{}%-", self.step_percent)
+        } else {
+            format!("{}%+", self.step_percent)
         };
 
         let result = Command::new("wpctl")
