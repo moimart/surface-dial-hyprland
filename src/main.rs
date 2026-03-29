@@ -60,11 +60,11 @@ fn main() {
                     }
                     DialEvent::Connected => {
                         log::info!("Surface Dial connected");
-                        let m = manager_poll.borrow();
-                        overlay.show_mode(m.icon(), m.name(), m.css_class(), overlay_timeout);
+                        overlay.show_status("\u{2b24}", "Connected", true, overlay_timeout);
                     }
                     DialEvent::Disconnected => {
                         log::warn!("Surface Dial disconnected, waiting for reconnect...");
+                        overlay.show_status("\u{25ef}", "Disconnected", false, overlay_timeout);
                     }
                     _ => {}
                 }

@@ -57,9 +57,37 @@ impl Overlay {
         }
     }
 
+    pub fn show_status(&self, icon: &str, name: &str, connected: bool, timeout_ms: u64) {
+        let css_class = if connected { "status-connected" } else { "status-disconnected" };
+        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom", "mode-hass-media", "status-connected", "status-disconnected"] {
+            self.container.remove_css_class(class);
+        }
+        self.container.add_css_class(css_class);
+
+        self.icon_label.set_text(icon);
+        self.name_label.set_text(name);
+
+        self.window.set_opacity(1.0);
+        self.window.set_visible(true);
+
+        let snap = self.epoch.get().wrapping_add(1);
+        self.epoch.set(snap);
+
+        let window = self.window.clone();
+        let epoch = self.epoch.clone();
+        glib::timeout_add_local_once(
+            std::time::Duration::from_millis(timeout_ms),
+            move || {
+                if epoch.get() == snap {
+                    window.set_visible(false);
+                }
+            },
+        );
+    }
+
     pub fn show_mode(&self, icon: &str, name: &str, css_class: &str, timeout_ms: u64) {
-        // Remove previous mode class
-        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom", "mode-hass-media"] {
+        // Remove previous mode/status class
+        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom", "mode-hass-media", "status-connected", "status-disconnected"] {
             self.container.remove_css_class(class);
         }
         self.container.add_css_class(css_class);
@@ -149,4 +177,10 @@ window {
 
 .mode-hass-media .overlay-icon { color: #f38ba8; }
 .mode-hass-media { border-color: rgba(243, 139, 168, 0.3); }
+
+.status-connected .overlay-icon { color: #a6e3a1; }
+.status-connected { border-color: rgba(166, 227, 161, 0.3); }
+
+.status-disconnected .overlay-icon { color: #f38ba8; }
+.status-disconnected { border-color: rgba(243, 139, 168, 0.3); }
 "#;
