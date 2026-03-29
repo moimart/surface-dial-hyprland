@@ -9,6 +9,7 @@ pub struct Config {
     pub volume: Volume,
     pub appscroll: AppScroll,
     pub zoom: Zoom,
+    pub hass_media: HassMedia,
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,6 +43,15 @@ pub struct Zoom {
     pub step: f64,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+pub struct HassMedia {
+    pub url: String,
+    pub token: String,
+    pub entity_id: String,
+    pub volume_step: f64,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -50,6 +60,7 @@ impl Default for Config {
             volume: Volume::default(),
             appscroll: AppScroll::default(),
             zoom: Zoom::default(),
+            hass_media: HassMedia::default(),
         }
     }
 }
@@ -93,6 +104,17 @@ impl Default for AppScroll {
 impl Default for Zoom {
     fn default() -> Self {
         Self { step: 0.5 }
+    }
+}
+
+impl Default for HassMedia {
+    fn default() -> Self {
+        Self {
+            url: String::new(),
+            token: String::new(),
+            entity_id: String::new(),
+            volume_step: 0.02,
+        }
     }
 }
 
