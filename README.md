@@ -53,26 +53,31 @@ bluetoothctl
 > exit
 ```
 
-### 3. Build and run
+### 3. Install
 
 ```sh
-cargo build --release
-./target/release/surface-dial-daemon
+make install    # builds release binary, installs to ~/.local/bin, copies default config
+make enable     # enables and starts the systemd user service
 ```
 
-Set `RUST_LOG=debug` for verbose output:
+This installs:
+- `~/.local/bin/surface-dial-daemon` — the binary
+- `~/.config/systemd/user/surface-dial.service` — systemd unit
+- `~/.config/surface-dial/config.toml` — config (won't overwrite existing)
+- `~/.config/surface-dial/theme.css` — theme (won't overwrite existing)
+
+To run manually instead:
 
 ```sh
-RUST_LOG=debug ./target/release/surface-dial-daemon
+cargo run --release
+# or with debug logging:
+RUST_LOG=debug cargo run --release
 ```
 
-## Configuration
-
-Copy the default config to `~/.config/surface-dial/`:
+### Uninstall
 
 ```sh
-mkdir -p ~/.config/surface-dial
-cp config.toml theme.css ~/.config/surface-dial/
+make uninstall  # stops service, removes binary and unit file (keeps config)
 ```
 
 ### config.toml
@@ -117,26 +122,6 @@ scrolling {
 }
 ```
 
-## Systemd user service (optional)
-
-```sh
-mkdir -p ~/.config/systemd/user
-cat > ~/.config/systemd/user/surface-dial.service << 'EOF'
-[Unit]
-Description=Surface Dial Daemon
-
-[Service]
-ExecStart=%h/.cargo/bin/surface-dial-daemon
-Restart=on-failure
-
-[Install]
-WantedBy=default.target
-EOF
-
-cargo install --path .
-systemctl --user enable --now surface-dial.service
-```
-
 ## Architecture
 
 ```
@@ -145,9 +130,11 @@ surface-dial-daemon
 ├── main.rs          GTK4 app, glib event loop, accumulator-based rotation
 ├── mode.rs          Mode manager (click cycles modes)
 ├── modes/
-│   ├── hyprscroll   layoutmsg focus r/l via hyprctl
+│   ├── hyprscroll   layoutmsg move +col/-col via hyprctl
 │   ├── volume       wpctl set-volume
-│   └── appscroll    uinput virtual scroll device
+│   ├── appscroll    uinput virtual scroll device
+│   ├── zoom         cursor:zoom_factor via hyprctl
+│   └── hass_media   Home Assistant media_player volume via REST API
 ├── overlay.rs       GTK4 + wlr-layer-shell floating indicator
 ├── hypr_ipc.rs      hyprctl subprocess wrapper
 └── config.rs        TOML config with defaults
