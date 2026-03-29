@@ -28,7 +28,7 @@ fn main() {
 
     app.connect_activate(move |app| {
         Overlay::load_css();
-        let overlay = Overlay::new(app);
+        let overlay = Rc::new(Overlay::new(app));
         let manager = Rc::new(RefCell::new(ModeManager::new(&config)));
 
         // Show initial mode briefly
@@ -47,6 +47,7 @@ fn main() {
         // Fast poll: drain channel events, accumulate rotation, handle clicks immediately
         let manager_poll = manager.clone();
         let rotate_acc_poll = rotate_acc.clone();
+        let overlay_poll = overlay.clone();
         glib::timeout_add_local(Duration::from_millis(4), move || {
             while let Ok(event) = rx.try_recv() {
                 match event {
@@ -56,15 +57,15 @@ fn main() {
                     DialEvent::Click => {
                         let mut m = manager_poll.borrow_mut();
                         m.cycle();
-                        overlay.show_mode(m.icon(), m.name(), m.css_class(), overlay_timeout);
+                        overlay_poll.show_mode(m.icon(), m.name(), m.css_class(), overlay_timeout);
                     }
                     DialEvent::Connected => {
                         log::info!("Surface Dial connected");
-                        overlay.show_status("\u{2b24}", "Connected", true, overlay_timeout);
+                        overlay_poll.show_status("\u{2b24}", "Connected", true, overlay_timeout);
                     }
                     DialEvent::Disconnected => {
                         log::warn!("Surface Dial disconnected, waiting for reconnect...");
-                        overlay.show_status("\u{25ef}", "Disconnected", false, overlay_timeout);
+                        overlay_poll.show_status("\u{25ef}", "Disconnected", false, overlay_timeout);
                     }
                     _ => {}
                 }
@@ -74,11 +75,15 @@ fn main() {
 
         // Rotation tick: process accumulated direction every 120ms
         let manager_tick = manager.clone();
+        let overlay_tick = overlay.clone();
         glib::timeout_add_local(Duration::from_millis(120), move || {
             let acc = rotate_acc.replace(0);
             if acc != 0 {
                 log::debug!("Rotate tick: acc={acc}, dir={}", acc.signum());
-                manager_tick.borrow_mut().on_rotate(acc.signum());
+                let mut m = manager_tick.borrow_mut();
+                if let Some(vol) = m.on_rotate(acc.signum()) {
+                    overlay_tick.show_volume(m.icon(), m.name(), m.css_class(), vol, overlay_timeout);
+                }
             }
             glib::ControlFlow::Continue
         });

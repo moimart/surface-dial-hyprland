@@ -1,13 +1,21 @@
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
+use std::cell::Cell;
+use std::rc::Rc;
+use std::time::Instant;
 
 pub struct Overlay {
     window: gtk4::Window,
     icon_label: gtk4::Label,
     name_label: gtk4::Label,
+    volume_bar: gtk4::ProgressBar,
+    volume_label: gtk4::Label,
+    volume_box: gtk4::Box,
     container: gtk4::Box,
-    epoch: std::cell::Cell<u64>,
+    last_activity: Rc<Cell<Instant>>,
+    hide_timeout_ms: Rc<Cell<u64>>,
+    hide_timer_active: Rc<Cell<bool>>,
 }
 
 impl Overlay {
@@ -20,19 +28,15 @@ impl Overlay {
             .resizable(false)
             .build();
 
-        // Layer shell setup
         window.init_layer_shell();
         window.set_layer(Layer::Overlay);
         window.set_keyboard_mode(KeyboardMode::None);
         window.set_exclusive_zone(-1);
-
-        // Center on screen: don't anchor to any edge
         window.set_anchor(Edge::Top, false);
         window.set_anchor(Edge::Bottom, false);
         window.set_anchor(Edge::Left, false);
         window.set_anchor(Edge::Right, false);
 
-        // Build UI
         let container = gtk4::Box::new(gtk4::Orientation::Vertical, 8);
         container.add_css_class("overlay-container");
         container.set_halign(gtk4::Align::Center);
@@ -44,82 +48,122 @@ impl Overlay {
         let name_label = gtk4::Label::new(None);
         name_label.add_css_class("overlay-name");
 
+        let volume_box = gtk4::Box::new(gtk4::Orientation::Vertical, 4);
+        volume_box.add_css_class("volume-box");
+        volume_box.set_visible(false);
+
+        let volume_bar = gtk4::ProgressBar::new();
+        volume_bar.add_css_class("volume-bar");
+        volume_bar.set_width_request(200);
+
+        let volume_label = gtk4::Label::new(None);
+        volume_label.add_css_class("volume-label");
+
+        volume_box.append(&volume_bar);
+        volume_box.append(&volume_label);
+
         container.append(&icon_label);
         container.append(&name_label);
+        container.append(&volume_box);
         window.set_child(Some(&container));
 
         Self {
             window,
             icon_label,
             name_label,
+            volume_bar,
+            volume_label,
+            volume_box,
             container,
-            epoch: std::cell::Cell::new(0),
+            last_activity: Rc::new(Cell::new(Instant::now())),
+            hide_timeout_ms: Rc::new(Cell::new(1500)),
+            hide_timer_active: Rc::new(Cell::new(false)),
         }
+    }
+
+    fn clear_classes(&self) {
+        for class in [
+            "mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom",
+            "mode-hass-media", "status-connected", "status-disconnected",
+        ] {
+            self.container.remove_css_class(class);
+        }
+    }
+
+    fn ensure_hide_timer(&self) {
+        self.last_activity.set(Instant::now());
+
+        if self.hide_timer_active.get() {
+            return;
+        }
+        self.hide_timer_active.set(true);
+
+        let window = self.window.clone();
+        let volume_box = self.volume_box.clone();
+        let last_activity = self.last_activity.clone();
+        let hide_timeout_ms = self.hide_timeout_ms.clone();
+        let hide_timer_active = self.hide_timer_active.clone();
+
+        glib::timeout_add_local(std::time::Duration::from_millis(250), move || {
+            let elapsed = last_activity.get().elapsed().as_millis() as u64;
+            if elapsed >= hide_timeout_ms.get() {
+                window.set_visible(false);
+                volume_box.set_visible(false);
+                hide_timer_active.set(false);
+                glib::ControlFlow::Break
+            } else {
+                glib::ControlFlow::Continue
+            }
+        });
     }
 
     pub fn show_status(&self, icon: &str, name: &str, connected: bool, timeout_ms: u64) {
         let css_class = if connected { "status-connected" } else { "status-disconnected" };
-        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom", "mode-hass-media", "status-connected", "status-disconnected"] {
-            self.container.remove_css_class(class);
-        }
+        self.clear_classes();
         self.container.add_css_class(css_class);
-
         self.icon_label.set_text(icon);
         self.name_label.set_text(name);
-
+        self.volume_box.set_visible(false);
+        self.hide_timeout_ms.set(timeout_ms);
         self.window.set_opacity(1.0);
         self.window.set_visible(true);
-
-        let snap = self.epoch.get().wrapping_add(1);
-        self.epoch.set(snap);
-
-        let window = self.window.clone();
-        let epoch = self.epoch.clone();
-        glib::timeout_add_local_once(
-            std::time::Duration::from_millis(timeout_ms),
-            move || {
-                if epoch.get() == snap {
-                    window.set_visible(false);
-                }
-            },
-        );
+        self.ensure_hide_timer();
     }
 
     pub fn show_mode(&self, icon: &str, name: &str, css_class: &str, timeout_ms: u64) {
-        // Remove previous mode/status class
-        for class in ["mode-hyprscroll", "mode-volume", "mode-appscroll", "mode-zoom", "mode-hass-media", "status-connected", "status-disconnected"] {
-            self.container.remove_css_class(class);
-        }
+        self.clear_classes();
         self.container.add_css_class(css_class);
-
         self.icon_label.set_text(icon);
         self.name_label.set_text(name);
-
+        self.volume_box.set_visible(false);
+        self.hide_timeout_ms.set(timeout_ms);
         self.window.set_opacity(1.0);
         self.window.set_visible(true);
+        self.ensure_hide_timer();
+    }
 
-        // Bump epoch to invalidate any pending hide timeout
-        let snap = self.epoch.get().wrapping_add(1);
-        self.epoch.set(snap);
+    pub fn show_volume(&self, icon: &str, name: &str, css_class: &str, volume: f64, timeout_ms: u64) {
+        let pct = (volume * 100.0).round() as i32;
+        self.volume_bar.set_fraction(volume.clamp(0.0, 1.0));
+        self.volume_label.set_text(&format!("{pct}%"));
+        self.volume_box.set_visible(true);
 
-        // Schedule hide — the closure captures the epoch and only hides
-        // if no newer show_mode call has occurred since
-        let window = self.window.clone();
-        let epoch = self.epoch.clone();
-        glib::timeout_add_local_once(
-            std::time::Duration::from_millis(timeout_ms),
-            move || {
-                if epoch.get() == snap {
-                    window.set_visible(false);
-                }
-            },
-        );
+        if !self.window.is_visible() {
+            self.clear_classes();
+            self.container.add_css_class(css_class);
+            self.icon_label.set_text(icon);
+            self.name_label.set_text(name);
+            self.window.set_opacity(1.0);
+            self.window.set_visible(true);
+        }
+
+        self.hide_timeout_ms.set(timeout_ms.max(2500));
+        self.ensure_hide_timer();
     }
 
     pub fn load_css() {
         let provider = gtk4::CssProvider::new();
 
-        // Try loading user theme first
         let user_css = crate::config::Config::config_dir().join("theme.css");
         if user_css.exists() {
             provider.load_from_path(user_css.to_string_lossy().as_ref());
@@ -161,6 +205,28 @@ window {
     color: #cdd6f4;
     letter-spacing: 1px;
     text-transform: uppercase;
+}
+
+.volume-box {
+    margin-top: 8px;
+}
+
+.volume-bar trough {
+    min-height: 8px;
+    border-radius: 4px;
+    background-color: rgba(108, 112, 134, 0.4);
+}
+
+.volume-bar progress {
+    min-height: 8px;
+    border-radius: 4px;
+    background-color: #f38ba8;
+}
+
+.volume-label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #eff1f5;
 }
 
 .mode-hyprscroll .overlay-icon { color: #89b4fa; }

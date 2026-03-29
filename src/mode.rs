@@ -83,12 +83,13 @@ impl ModeManager {
         self.current_mode()
     }
 
-    pub fn on_rotate(&mut self, delta: i32) {
+    /// Returns Some(volume) for modes that report a volume level, None otherwise.
+    pub fn on_rotate(&mut self, delta: i32) -> Option<f64> {
         match self.current_mode() {
-            ModeKind::HyprScroll => self.hyprscroll.on_rotate(delta),
-            ModeKind::Volume => self.volume.on_rotate(delta),
-            ModeKind::AppScroll => self.appscroll.on_rotate(delta),
-            ModeKind::Zoom => self.zoom.on_rotate(delta),
+            ModeKind::HyprScroll => { self.hyprscroll.on_rotate(delta); None }
+            ModeKind::Volume => { self.volume.on_rotate(delta); None }
+            ModeKind::AppScroll => { self.appscroll.on_rotate(delta); None }
+            ModeKind::Zoom => { self.zoom.on_rotate(delta); None }
             ModeKind::HassMedia => self.hass_media.on_rotate(delta),
         }
     }

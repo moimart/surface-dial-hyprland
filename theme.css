@@ -26,6 +26,28 @@ window {
     text-transform: uppercase;
 }
 
+.volume-box {
+    margin-top: 8px;
+}
+
+.volume-bar trough {
+    min-height: 8px;
+    border-radius: 4px;
+    background-color: rgba(108, 112, 134, 0.4);
+}
+
+.volume-bar progress {
+    min-height: 8px;
+    border-radius: 4px;
+    background-color: #f38ba8;
+}
+
+.volume-label {
+    font-size: 18px;
+    font-weight: bold;
+    color: #eff1f5;
+}
+
 /* Mode-specific accent colors */
 .mode-hyprscroll .overlay-icon { color: #89b4fa; }
 .mode-hyprscroll { border-color: rgba(137, 180, 250, 0.3); }
@@ -35,3 +57,15 @@ window {
 
 .mode-appscroll .overlay-icon { color: #f9e2af; }
 .mode-appscroll { border-color: rgba(249, 226, 175, 0.3); }
+
+.mode-zoom .overlay-icon { color: #cba6f7; }
+.mode-zoom { border-color: rgba(203, 166, 247, 0.3); }
+
+.mode-hass-media .overlay-icon { color: #f38ba8; }
+.mode-hass-media { border-color: rgba(243, 139, 168, 0.3); }
+
+.status-connected .overlay-icon { color: #a6e3a1; }
+.status-connected { border-color: rgba(166, 227, 161, 0.3); }
+
+.status-disconnected .overlay-icon { color: #f38ba8; }
+.status-disconnected { border-color: rgba(243, 139, 168, 0.3); }
