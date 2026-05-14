@@ -1,3 +1,4 @@
+use crate::hypr_ipc;
 use std::process::Command;
 
 pub struct ZoomMode {
@@ -10,6 +11,7 @@ impl ZoomMode {
     }
 
     fn get_zoom_factor() -> f64 {
+        // `hyprctl getoption` works on both 0.54 (hyprlang) and 0.55 (Lua).
         let output = Command::new("hyprctl")
             .args(["getoption", "cursor:zoom_factor"])
             .output()
@@ -26,6 +28,30 @@ impl ZoomMode {
             .unwrap_or(1.0)
     }
 
+    fn set_zoom_factor(new_zoom: f64) -> Result<(), String> {
+        if hypr_ipc::use_lua() {
+            // 0.55+: `hyprctl keyword` is rejected by the Lua parser
+            // ("keyword can't work with non-legacy parsers. Use eval.").
+            let lua = format!(
+                "hl.config({{ cursor = {{ zoom_factor = {new_zoom:.2} }} }})"
+            );
+            return hypr_ipc::hypr_eval(&lua);
+        }
+        // 0.54 and earlier: legacy keyword path.
+        let arg = format!("cursor:zoom_factor {new_zoom:.2}");
+        let output = Command::new("hyprctl")
+            .args(["keyword", &arg])
+            .output()
+            .map_err(|e| format!("Failed to run hyprctl: {e}"))?;
+        if !output.status.success() {
+            return Err(format!(
+                "hyprctl keyword failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+        Ok(())
+    }
+
     pub fn on_rotate(&self, delta: i32) {
         let current = Self::get_zoom_factor();
         let new_zoom = if delta > 0 {
@@ -38,17 +64,9 @@ impl ZoomMode {
             return;
         }
 
-        let arg = format!("cursor:zoom_factor {new_zoom:.2}");
-        let result = Command::new("hyprctl")
-            .args(["keyword", &arg])
-            .output();
-
-        match result {
-            Ok(o) if !o.status.success() => {
-                log::warn!("hyprctl zoom failed: {}", String::from_utf8_lossy(&o.stderr));
-            }
-            Err(e) => log::warn!("Failed to run hyprctl: {e}"),
-            _ => log::debug!("Zoom: {current:.2} -> {new_zoom:.2}"),
+        match Self::set_zoom_factor(new_zoom) {
+            Ok(()) => log::debug!("Zoom: {current:.2} -> {new_zoom:.2}"),
+            Err(e) => log::warn!("Zoom set failed: {e}"),
         }
     }
 
